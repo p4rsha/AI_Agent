@@ -1,6 +1,7 @@
 # For grabbing the API Key
 import os
 from dotenv import load_dotenv
+from prompts import system_prompt
 
 # To make genai client 
 from google import genai
@@ -42,7 +43,9 @@ def main():
     print("Hello from Gemini!")
 
     response = client.models.generate_content(
-    model='gemini-2.5-flash', contents= messeges)
+    model='gemini-2.5-flash', 
+    contents= messeges,
+    config=types.GenerateContentConfig(system_instruction=system_prompt))
 
 
     #failsafe for metadata 
