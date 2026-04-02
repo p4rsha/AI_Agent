@@ -10,6 +10,9 @@ from google import genai
 
 from google.genai import types
 
+# Grabbing Functions Schema
+from functions.call_function import available_functions
+
 
 # To allow for prompmt in the CLI
 import argparse
@@ -45,7 +48,8 @@ def main():
     response = client.models.generate_content(
     model='gemini-2.5-flash', 
     contents= messeges,
-    config=types.GenerateContentConfig(system_instruction=system_prompt))
+    config=types.GenerateContentConfig(
+        tools=[available_functions], system_instruction=system_prompt))
 
 
     #failsafe for metadata 
@@ -66,8 +70,13 @@ def main():
         print(f"Prompt tokens: {prompt_token_count}")
         print(f"Response tokens: {response_token_count}")
 
+    if response.function_calls:
 
-    print(response.text)
+        for function_call in response.function_calls:
+            print(f"Calling function: {function_call.name}({function_call.args})")
+
+    else:
+       print(response.text)
 
 if __name__ == "__main__":
     main()
