@@ -10,8 +10,8 @@ from google import genai
 
 from google.genai import types
 
-# Grabbing Functions Schema
-from functions.call_function import available_functions
+# Grabbing Functions Schema and Call Function function
+from functions.call_function import available_functions , call_function
 
 
 # To allow for prompmt in the CLI
@@ -72,8 +72,31 @@ def main():
 
     if response.function_calls:
 
+        #We need this later if checks pass
+        function_call_result_list = []
+
         for function_call in response.function_calls:
             print(f"Calling function: {function_call.name}({function_call.args})")
+            function_call_result = call_function(function_call, verbose=args.verbose)
+
+
+            # CHECK : DID WE ACTUALLY GET A RESPONSE ? __ Gemini boiler plate stuff and object structure
+    
+            if not function_call_result.parts:
+                raise Exception("Function call result has no parts")
+            
+            if function_call_result.parts[0].function_response is None:
+                raise Exception("Missing function_response in result")
+
+            if function_call_result.parts[0].function_response.response is None:
+                raise Exception("Missing response in function_response")
+            
+            function_call_result_list.append(function_call_result.parts[0])
+
+            if args.verbose:
+                print(f"-> {function_call_result.parts[0].function_response.response}")
+
+
 
     else:
        print(response.text)
