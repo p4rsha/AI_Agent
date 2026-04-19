@@ -44,62 +44,76 @@ messeges = [types.Content(role="user" , parts=[(types.Part(text=args.user_prompt
 
 def main():
     print("Hello from Gemini!")
-
-    response = client.models.generate_content(
-    model='gemini-2.5-flash', 
-    contents= messeges,
-    config=types.GenerateContentConfig(
-        tools=[available_functions], system_instruction=system_prompt))
-
-
-    #failsafe for metadata 
-    if response.usage_metadata is None :
-        raise RuntimeError("Response Metadata not found you dumbass")
-
-
-    # meta-data about tokens
-
-    prompt_token_count = response.usage_metadata.prompt_token_count
-    response_token_count = response.usage_metadata.candidates_token_count
-
     
+    for _ in range(20):
 
-    #Output block
-    if args.verbose:
-        print(f"User prompt: {args.user_prompt}")
-        print(f"Prompt tokens: {prompt_token_count}")
-        print(f"Response tokens: {response_token_count}")
-
-    if response.function_calls:
-
-        #We need this later if checks pass
-        function_call_result_list = []
-
-        for function_call in response.function_calls:
-            print(f"Calling function: {function_call.name}({function_call.args})")
-            function_call_result = call_function(function_call, verbose=args.verbose)
+        response = client.models.generate_content(
+        model='gemini-2.5-flash', 
+        contents= messeges,
+        config=types.GenerateContentConfig(
+            tools=[available_functions], system_instruction=system_prompt))
 
 
-            # CHECK : DID WE ACTUALLY GET A RESPONSE ? __ Gemini boiler plate stuff and object structure
-    
-            if not function_call_result.parts:
-                raise Exception("Function call result has no parts")
-            
-            if function_call_result.parts[0].function_response is None:
-                raise Exception("Missing function_response in result")
-
-            if function_call_result.parts[0].function_response.response is None:
-                raise Exception("Missing response in function_response")
-            
-            function_call_result_list.append(function_call_result.parts[0])
-
-            if args.verbose:
-                print(f"-> {function_call_result.parts[0].function_response.response}")
+        #failsafe for metadata 
+        if response.usage_metadata is None :
+            raise RuntimeError("Response Metadata not found you dumbass")
 
 
+        # meta-data about tokens
 
-    else:
-       print(response.text)
+        prompt_token_count = response.usage_metadata.prompt_token_count
+        response_token_count = response.usage_metadata.candidates_token_count
+
+
+        # Gemini,   was called uppon to generate a message . Let's append it's response 
+
+        for candidate in response.candidates:
+            messeges.append(candidate.content)
+
+        
+
+        #Output block
+        if args.verbose:
+            print(f"User prompt: {args.user_prompt}")
+            print(f"Prompt tokens: {prompt_token_count}")
+            print(f"Response tokens: {response_token_count}")
+
+        if response.function_calls:
+
+            #We need this later if checks pass
+            function_call_result_list = []
+
+            for function_call in response.function_calls:
+                print(f"Calling function: {function_call.name}({function_call.args})")
+                function_call_result = call_function(function_call, verbose=args.verbose)
+
+
+                # CHECK : DID WE ACTUALLY GET A RESPONSE ? __ Gemini boiler plate stuff and object structure
+        
+                if not function_call_result.parts:
+                    raise Exception("Function call result has no parts")
+                
+                if function_call_result.parts[0].function_response is None:
+                    raise Exception("Missing function_response in result")
+
+                if function_call_result.parts[0].function_response.response is None:
+                    raise Exception("Missing response in function_response")
+                
+                function_call_result_list.append(function_call_result.parts[0])
+
+                if args.verbose:
+                    print(f"-> {function_call_result.parts[0].function_response.response}")
+
+            messeges.append(types.Content(role="user", parts=function_call_result_list))
+
+
+
+        else:
+         print(f"Final response:\n{response.text}")
+         return
+
+    print("Max iterations reached without a final response")
+    exit(1)
 
 if __name__ == "__main__":
     main()
